@@ -141,6 +141,7 @@ let lastScanTime = 0;
 
 frame.addEventListener('load', function(){
   frameReady = true;
+  console.log('Attendance frame loaded:', frame.contentWindow.location.href);
 });
 
 function showStatus(message, error){
