@@ -4,10 +4,216 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>نظام حضور الطلاب</title>
+<title>بوابة المدرسة - تسجيل الحضور</title>
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:#f1f5f9;
+  font-family:Arial,Tahoma,sans-serif;
+  color:#172033;
+}
+header{
+  background:#12345a;
+  color:white;
+  text-align:center;
+  padding:22px 12px;
+}
+header h2{margin:0 0 8px}
+main{
+  max-width:650px;
+  margin:22px auto;
+  padding:0 14px;
+}
+.panel{
+  background:white;
+  border:1px solid #dbe3ee;
+  border-radius:14px;
+  padding:18px;
+  margin-bottom:15px;
+  text-align:center;
+}
+#reader{
+  width:100%;
+  max-width:440px;
+  margin:15px auto;
+}
+button{
+  background:#1763a6;
+  color:white;
+  border:0;
+  padding:13px 24px;
+  border-radius:9px;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+button:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+#status{
+  padding:13px;
+  border-radius:9px;
+  background:#f1f5f9;
+  margin-top:12px;
+  line-height:1.8;
+}
+.small{
+  color:#64748b;
+  font-size:13px;
+  line-height:1.8;
+}
+iframe{
+  width:100%;
+  height:230px;
+  border:0;
+  border-radius:10px;
+  background:#f8fafc;
+}
+</style>
 </head>
+
 <body>
-<h2>بوابة المدرسة</h2>
-<p>يجري تجهيز نظام مسح بطاقات الطلاب QR.</p>
+
+<header>
+  <h2>بوابة المدرسة</h2>
+  <div>نظام مسح بطاقات الطلاب وتسجيل الحضور</div>
+</header>
+
+<main>
+
+  <section class="panel">
+    <h3>مسح بطاقة الطالب QR</h3>
+
+    <div id="reader"></div>
+
+    <button id="startBtn" onclick="startScanner()">
+      تشغيل الكاميرا الخلفية
+    </button>
+
+    <div id="status">
+      اضغط تشغيل الكاميرا ووجّهها نحو بطاقة الطالب.
+    </div>
+
+    <p class="small">
+      تأكد من السماح باستخدام الكاميرا واتصال الهاتف بالإنترنت.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h3>نتيجة تسجيل الحضور</h3>
+
+    <iframe
+      id="attendanceFrame"
+      src="https://script.google.com/macros/s/AKfycbyDXed1ELJL8A9AktkNsLCe0VS3yiaPapasHtDQ3Das-CJoGxCVnV5U7JdF1B--B4LYHA/exec?page=scan"
+      title="نتيجة تسجيل الحضور">
+    </iframe>
+  </section>
+
+</main>
+
+<script>
+const frame = document.getElementById('attendanceFrame');
+const statusBox = document.getElementById('status');
+const startBtn = document.getElementById('startBtn');
+
+let scanner = null;
+let busy = false;
+let frameReady = false;
+let lastToken = '';
+let lastScanTime = 0;
+
+frame.addEventListener('load', function(){
+  frameReady = true;
+});
+
+function showStatus(message, error){
+  statusBox.textContent = message;
+  statusBox.style.background = error ? '#fee2e2' : '#f1f5f9';
+  statusBox.style.color = error ? '#991b1b' : '#172033';
+}
+
+async function onScan(decodedText){
+  const token = String(decodedText).trim();
+  const now = Date.now();
+
+  if(!token || busy) return;
+
+  if(token === lastToken && now-lastScanTime < 5000){
+    return;
+  }
+
+  if(!frameReady){
+    showStatus('انتظر تحميل نظام تسجيل الحضور.');
+    return;
+  }
+
+  busy = true;
+  lastToken = token;
+  lastScanTime = now;
+
+  try{
+    frame.contentWindow.postMessage({
+      type:'QR_SCAN',
+      token:token
+    }, '*');
+
+    showStatus('تم إرسال البطاقة. انتظر ظهور نتيجة التسجيل أدناه.');
+
+  }catch(error){
+    showStatus('تعذر إرسال البطاقة: '+error.message, true);
+  }
+
+  setTimeout(function(){
+    busy = false;
+    showStatus('جاهز لمسح البطاقة التالية.');
+  }, 5000);
+}
+
+async function startScanner(){
+
+  if(!window.Html5Qrcode){
+    showStatus('تعذر تحميل مكتبة QR. تحقق من الإنترنت.', true);
+    return;
+  }
+
+  if(!frameReady){
+    showStatus('انتظر تحميل صفحة تسجيل الحضور.');
+    return;
+  }
+
+  try{
+    startBtn.disabled = true;
+    showStatus('جارٍ تشغيل الكاميرا...');
+
+    scanner = new Html5Qrcode('reader');
+
+    await scanner.start(
+      {facingMode:'environment'},
+      {
+        fps:10,
+        qrbox:{width:240,height:240},
+        aspectRatio:1
+      },
+      onScan,
+      function(){}
+    );
+
+    showStatus('الكاميرا تعمل. وجّهها نحو QR بطاقة الطالب.');
+
+  }catch(error){
+    showStatus(
+      'تعذر تشغيل الكاميرا: '+(error.message || error),
+      true
+    );
+    startBtn.disabled = false;
+  }
+}
+</script>
+
 </body>
 </html>
