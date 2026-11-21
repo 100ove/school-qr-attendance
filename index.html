@@ -10,52 +10,122 @@
 
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#f1f5f9;font-family:Arial,Tahoma,sans-serif;color:#172033}
-header{background:#12345a;color:white;text-align:center;padding:22px 12px}
+
+body{
+  margin:0;
+  background:#f1f5f9;
+  font-family:Arial,Tahoma,sans-serif;
+  color:#172033;
+}
+
+header{
+  background:#12345a;
+  color:white;
+  text-align:center;
+  padding:22px 12px;
+}
+
 header h2{margin:0 0 8px}
-main{max-width:650px;margin:22px auto;padding:0 14px}
-.panel{background:white;border:1px solid #dbe3ee;border-radius:14px;padding:18px;margin-bottom:15px;text-align:center}
-#reader{width:100%;max-width:440px;margin:15px auto}
-button{background:#1763a6;color:white;border:0;padding:13px 24px;border-radius:9px;font-size:16px;font-weight:bold;cursor:pointer}
-button:disabled{opacity:.5;cursor:not-allowed}
-#status{padding:13px;border-radius:9px;background:#f1f5f9;margin-top:12px;line-height:1.8;overflow-wrap:anywhere}
-.small{color:#64748b;font-size:13px;line-height:1.8}
-iframe{width:100%;height:230px;border:0;border-radius:10px;background:#f8fafc}
+
+main{
+  max-width:650px;
+  margin:22px auto;
+  padding:0 14px;
+}
+
+.panel{
+  background:white;
+  border:1px solid #dbe3ee;
+  border-radius:14px;
+  padding:18px;
+  margin-bottom:15px;
+  text-align:center;
+}
+
+#reader{
+  width:100%;
+  max-width:440px;
+  margin:15px auto;
+}
+
+button{
+  background:#1763a6;
+  color:white;
+  border:0;
+  padding:13px 24px;
+  border-radius:9px;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+button:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+}
+
+#status{
+  padding:13px;
+  border-radius:9px;
+  background:#f1f5f9;
+  margin-top:12px;
+  line-height:1.8;
+  overflow-wrap:anywhere;
+}
+
+.small{
+  color:#64748b;
+  font-size:13px;
+  line-height:1.8;
+}
+
+iframe{
+  width:100%;
+  height:230px;
+  border:0;
+  border-radius:10px;
+  background:#f8fafc;
+}
 </style>
 </head>
 
 <body>
+
 <header>
-<h2>بوابة المدرسة</h2>
-<div>نظام مسح بطاقات الطلاب وتسجيل الحضور</div>
+  <h2>بوابة المدرسة</h2>
+  <div>نظام مسح بطاقات الطلاب وتسجيل الحضور</div>
 </header>
 
 <main>
-<section class="panel">
-<h3>مسح بطاقة الطالب QR</h3>
-<div id="reader"></div>
 
-<button id="startBtn" onclick="startScanner()">
-تشغيل الكاميرا الخلفية
-</button>
+  <section class="panel">
+    <h3>مسح بطاقة الطالب QR</h3>
 
-<div id="status">
-اضغط تشغيل الكاميرا ووجّهها نحو بطاقة الطالب.
-</div>
+    <div id="reader"></div>
 
-<p class="small">
-تأكد من السماح باستخدام الكاميرا واتصال الهاتف بالإنترنت.
-</p>
-</section>
+    <button id="startBtn" onclick="startScanner()">
+      تشغيل الكاميرا الخلفية
+    </button>
 
-<section class="panel">
-<h3>نتيجة تسجيل الحضور</h3>
-<iframe
-id="attendanceFrame"
-src="https://script.google.com/macros/s/AKfycbyDXed1ELJL8A9AktkNsLCe0VS3yiaPapasHtDQ3Das-CJoGxCVnV5U7JdF1B--B4LYHA/exec?page=scan"
-title="نتيجة تسجيل الحضور">
-</iframe>
-</section>
+    <div id="status">
+      اضغط تشغيل الكاميرا ووجّهها نحو بطاقة الطالب.
+    </div>
+
+    <p class="small">
+      تأكد من السماح باستخدام الكاميرا واتصال الهاتف بالإنترنت.
+    </p>
+  </section>
+
+  <section class="panel">
+    <h3>نتيجة تسجيل الحضور</h3>
+
+    <iframe
+      id="attendanceFrame"
+      src="https://script.google.com/macros/s/AKfycbyDXed1ELJL8A9AktkNsLCe0VS3yiaPapasHtDQ3Das-CJoGxCVnV5U7JdF1B--B4LYHA/exec?page=scan"
+      title="نتيجة تسجيل الحضور">
+    </iframe>
+  </section>
+
 </main>
 
 <script>
@@ -80,15 +150,18 @@ function showStatus(message, error){
 }
 
 async function onScan(decodedText){
+
   const token = String(decodedText).trim();
   const now = Date.now();
 
   if(!token || busy) return;
 
-  if(token === lastToken && now-lastScanTime < 5000) return;
+  if(token === lastToken && now-lastScanTime < 5000){
+    return;
+  }
 
   if(!frameReady){
-    showStatus('الكاميرا تعمل، لكن صفحة تسجيل الحضور لم تكتمل. تحقق من رابط صفحة الحضور.', true);
+    showStatus('تمت قراءة البطاقة، لكن صفحة تسجيل الحضور لم تكتمل. انتظر قليلاً.', true);
     return;
   }
 
@@ -97,6 +170,7 @@ async function onScan(decodedText){
   lastScanTime = now;
 
   try{
+
     frame.contentWindow.postMessage({
       type:'QR_SCAN',
       token:token
@@ -105,7 +179,9 @@ async function onScan(decodedText){
     showStatus('تم إرسال البطاقة. انتظر ظهور نتيجة التسجيل.');
 
   }catch(error){
+
     showStatus('تعذر إرسال البطاقة: '+error.message, true);
+
   }
 
   setTimeout(function(){
@@ -115,33 +191,21 @@ async function onScan(decodedText){
 }
 
 async function startScanner(){
+
   if(!window.Html5Qrcode){
-    showStatus('لم يتم تحميل مكتبة QR. تحقق من اتصال الإنترنت ثم أعد تحميل الصفحة.', true);
+    showStatus('تعذر تحميل مكتبة QR. تحقق من الإنترنت.', true);
     return;
   }
 
   try{
+
     startBtn.disabled = true;
-    showStatus('جارٍ البحث عن كاميرا الهاتف...');
+    showStatus('جارٍ تشغيل الكاميرا الخلفية...');
 
     scanner = new Html5Qrcode('reader');
 
-    const cameras = await Html5Qrcode.getCameras();
-
-    if(!cameras || cameras.length === 0){
-      throw new Error('لم يتم العثور على كاميرا. تحقق من صلاحيات الهاتف.');
-    }
-
-    const backCamera = cameras.find(camera =>
-      /back|rear|environment|خلف/i.test(camera.label)
-    );
-
-    const selectedCamera = backCamera || cameras[cameras.length - 1];
-
-    showStatus('تم العثور على الكاميرا. جارٍ تشغيلها...');
-
     await scanner.start(
-      selectedCamera.id,
+      {facingMode:'environment'},
       {
         fps:10,
         qrbox:{width:240,height:240},
@@ -154,17 +218,23 @@ async function startScanner(){
     showStatus('الكاميرا تعمل. وجّهها نحو QR بطاقة الطالب.');
 
   }catch(error){
+
     startBtn.disabled = false;
 
     const detail = error && error.message
       ? error.message
       : String(error);
 
-    showStatus('تعذر تشغيل الكاميرا. السبب: '+detail, true);
+    showStatus(
+      'تعذر تشغيل الكاميرا. السبب: ' +
+      (error.name || 'Error') + ' - ' + detail,
+      true
+    );
 
     console.error('Camera error:', error);
   }
 }
 </script>
+
 </body>
 </html>
