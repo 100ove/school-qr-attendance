@@ -171,10 +171,17 @@ async function onScan(decodedText){
 
   try{
 
-    frame.contentWindow.postMessage({
-      type:'QR_SCAN',
-      token:token
-    }, '*');
+frame.contentWindow.postMessage({
+  type:'QR_SCAN',
+  token:token
+}, '*');
+
+setTimeout(function(){
+  frame.contentWindow.postMessage({
+    type:'QR_TEST',
+    token:'TEST'
+  }, '*');
+}, 1000);
 
     showStatus('تم إرسال البطاقة. انتظر ظهور نتيجة التسجيل.');
 
