@@ -172,19 +172,27 @@ async function onScan(decodedText){
 
   try{
 
-frame.contentWindow.postMessage({
-  type:'QR_SCAN',
-  token:token
-}, '*');
 
-setTimeout(function(){
-  frame.contentWindow.postMessage({
-    type:'QR_TEST',
-    token:'TEST'
-  }, '*');
-}, 1000);
+const response = await fetch(
+  'https://script.google.com/macros/s/AKfycbyDXed1ELJL8A9AktkNsLCe0VS3yiaPapasHtDQ3Das-CJoGxCVnV5U7JdF1B--B4LYHA/exec',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify({token: token})
+  }
+);
 
-    showStatus('تم إرسال البطاقة. انتظر ظهور نتيجة التسجيل.');
+const result = await response.json();
+
+if (result.ok || result.duplicate) {
+  showStatus(result.message);
+} else {
+  showStatus(result.message || 'تعذر تسجيل الحضور.', true);
+}
+
+
 
   }catch(error){
 
@@ -192,10 +200,9 @@ setTimeout(function(){
 
   }
 
-  setTimeout(function(){
-    busy = false;
-    showStatus('جاهز لمسح البطاقة التالية.');
-  }, 5000);
+setTimeout(function(){
+  busy = false;
+}, 5000);
 }
 
 async function startScanner(){
