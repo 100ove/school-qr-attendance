@@ -65,12 +65,35 @@ button:disabled{
 }
 
 #status{
-  padding:13px;
+  padding:15px;
   border-radius:9px;
   background:#f1f5f9;
   margin-top:12px;
-  line-height:1.8;
+  line-height:2;
   overflow-wrap:anywhere;
+  text-align:center;
+}
+
+#status.success{
+  background:#dcfce7;
+  color:#166534;
+}
+
+#status.error{
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+#status.duplicate{
+  background:#fef3c7;
+  color:#92400e;
+}
+
+.student-name{
+  font-size:20px;
+  font-weight:bold;
+  display:block;
+  margin:5px 0;
 }
 
 .small{
@@ -142,13 +165,76 @@ let lastScanTime = 0;
 
 frame.addEventListener('load', function(){
   frameReady = true;
-  console.log('Attendance frame loaded');
 });
 
-function showStatus(message, error){
-  statusBox.textContent = message;
-  statusBox.style.background = error ? '#fee2e2' : '#f1f5f9';
-  statusBox.style.color = error ? '#991b1b' : '#172033';
+function showStatus(message, type){
+  statusBox.className = type || '';
+  statusBox.innerHTML = message;
+}
+
+function escapeHTML(value){
+  return String(value == null ? '' : value).replace(/[&<>"']/g, function(char){
+    return {
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[char];
+  });
+}
+
+function displayResult(result){
+
+  const student = result.student || {};
+  const name = escapeHTML(student.name || 'طالب');
+  const grade = escapeHTML(student.grade || '');
+  const section = escapeHTML(student.section || '');
+  const time = escapeHTML(result.time || '');
+  const status = escapeHTML(result.status || '');
+
+  if(result.duplicate){
+
+    showStatus(
+      '<strong>هذه البطاقة مسجلة مسبقاً اليوم</strong>' +
+      '<span class="student-name">' + name + '</span>' +
+      (grade ? 'الصف: ' + grade : '') +
+      (section ? ' - الشعبة: ' + section : ''),
+      'duplicate'
+    );
+
+    return;
+  }
+
+  if(result.ok){
+
+    let heading = 'تم تسجيل حضور الطالب بنجاح';
+
+    if(status === 'متأخر'){
+      heading = 'تم تسجيل الطالب متأخراً';
+    }else if(status === 'غائب'){
+      heading = 'تم تسجيل الطالب غائباً';
+    }else if(result.message && result.message.indexOf('تحديث') !== -1){
+      heading = 'تم تحديث سجل الطالب بنجاح';
+    }
+
+    showStatus(
+      '<strong>' + heading + '</strong>' +
+      '<span class="student-name">' + name + '</span>' +
+      (grade ? 'الصف: ' + grade : '') +
+      (section ? ' - الشعبة: ' + section : '') +
+      (status ? '<br>الحالة: ' + status : '') +
+      (time ? '<br>وقت التسجيل: ' + time : ''),
+      'success'
+    );
+
+    return;
+  }
+
+  showStatus(
+    escapeHTML(result.message || 'تعذر تسجيل الحضور.'),
+    'error'
+  );
 }
 
 async function onScan(decodedText){
@@ -158,7 +244,6 @@ async function onScan(decodedText){
 
   if(!token || busy) return;
 
-  // منع تكرار قراءة البطاقة نفسها لمدة 1.2 ثانية
   if(token === lastToken && now-lastScanTime < 1200){
     return;
   }
@@ -166,7 +251,7 @@ async function onScan(decodedText){
   if(!frameReady){
     showStatus(
       'تمت قراءة البطاقة، لكن صفحة تسجيل الحضور لم تكتمل. انتظر قليلاً.',
-      true
+      'error'
     );
     return;
   }
@@ -175,43 +260,37 @@ async function onScan(decodedText){
   lastToken = token;
   lastScanTime = now;
 
+  showStatus('جارٍ تسجيل البطاقة...', '');
+
   try{
 
     const response = await fetch(
       'https://script.google.com/macros/s/AKfycbyDXed1ELJL8A9AktkNsLCe0VS3yiaPapasHtDQ3Das-CJoGxCVnV5U7JdF1B--B4LYHA/exec',
       {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
+        method:'POST',
+        headers:{
+          'Content-Type':'text/plain;charset=utf-8'
         },
-        body: JSON.stringify({token: token})
+        body:JSON.stringify({token:token})
       }
     );
 
     const result = await response.json();
 
-    if(result.ok || result.duplicate){
-      showStatus(result.message);
-    }else{
-      showStatus(
-        result.message || 'تعذر تسجيل الحضور.',
-        true
-      );
-    }
+    displayResult(result);
 
   }catch(error){
 
     showStatus(
-      'تعذر إرسال البطاقة: '+error.message,
-      true
+      'تعذر إرسال البطاقة: ' + escapeHTML(error.message),
+      'error'
     );
 
   }finally{
 
-    // تقليل فترة الانتظار قبل قراءة البطاقة التالية
     setTimeout(function(){
       busy = false;
-    }, 300);
+    },300);
 
   }
 }
@@ -219,14 +298,14 @@ async function onScan(decodedText){
 async function startScanner(){
 
   if(!window.Html5Qrcode){
-    showStatus('تعذر تحميل مكتبة QR. تحقق من الإنترنت.', true);
+    showStatus('تعذر تحميل مكتبة QR. تحقق من الإنترنت.','error');
     return;
   }
 
   try{
 
     startBtn.disabled = true;
-    showStatus('جارٍ تشغيل الكاميرا الخلفية...');
+    showStatus('جارٍ تشغيل الكاميرا الخلفية...','');
 
     scanner = new Html5Qrcode('reader');
 
@@ -241,7 +320,7 @@ async function startScanner(){
       function(){}
     );
 
-    showStatus('الكاميرا تعمل. وجّهها نحو QR بطاقة الطالب.');
+    showStatus('الكاميرا تعمل. وجّهها نحو QR بطاقة الطالب.','');
 
   }catch(error){
 
@@ -253,11 +332,12 @@ async function startScanner(){
 
     showStatus(
       'تعذر تشغيل الكاميرا. السبب: ' +
-      (error.name || 'Error') + ' - ' + detail,
-      true
+      escapeHTML(error.name || 'Error') + ' - ' +
+      escapeHTML(detail),
+      'error'
     );
 
-    console.error('Camera error:', error);
+    console.error('Camera error:',error);
   }
 }
 </script>
